@@ -22,7 +22,7 @@ import gi
 from apostrophe import helpers, markup_regex
 from apostrophe.markup_regex import STRIKETHROUGH, BOLD_ITALIC, BOLD, ITALIC_ASTERISK, ITALIC_UNDERSCORE, IMAGE, LINK,\
     LINK_ALT, HORIZONTAL_RULE, LIST, ORDERED_LIST, BLOCK_QUOTE, HEADER, HEADER_UNDER, TABLE, MATH, \
-    CODE
+    CODE, SUPERSCRIPT, SUBSCRIPT
 
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, GLib
@@ -34,11 +34,14 @@ class MarkupHandler:
     TAG_NAME_BOLD = 'bold'
     TAG_NAME_BOLD_ITALIC = 'bold_italic'
     TAG_NAME_STRIKETHROUGH = 'strikethrough'
+    TAG_NAME_SUPERSCRIPT = 'superscript'
+    TAG_NAME_SUBSCRIPT = 'subscript'
     TAG_NAME_CENTER = 'center'
     TAG_NAME_WRAP_NONE = 'wrap_none'
     TAG_NAME_PLAIN_TEXT = 'plain_text'
     TAG_NAME_GRAY_TEXT = 'gray_text'
     TAG_NAME_CODE_TEXT = 'code_text'
+    TAG_NAME_MATH_TEXT = 'math_text'
     TAG_NAME_CODE_BLOCK = 'code_block'
     TAG_NAME_UNFOCUSED_TEXT = 'unfocused_text'
     TAG_NAME_MARGIN_INDENT = 'margin_indent'
@@ -66,6 +69,12 @@ class MarkupHandler:
         self.tag_strikethrough = buffer.create_tag(self.TAG_NAME_STRIKETHROUGH,
                                                    strikethrough=True)
 
+        self.tag_superscript = buffer.create_tag(self.TAG_NAME_SUPERSCRIPT,
+                                                   rise = 4000)
+                                                   
+        self.tag_subscript = buffer.create_tag(self.TAG_NAME_SUBSCRIPT,
+                                                   rise = -4000)
+                                                   
         self.tag_center = buffer.create_tag(self.TAG_NAME_CENTER,
                                             justification=Gtk.Justification.CENTER)
 
@@ -90,6 +99,12 @@ class MarkupHandler:
                                                style=Pango.Style.NORMAL,
                                                strikethrough=False)
 
+        self.tag_math_text = buffer.create_tag(self.TAG_NAME_MATH_TEXT,
+                                               foreground='green',
+                                               weight=Pango.Weight.NORMAL,
+                                               style=Pango.Style.NORMAL,
+                                               strikethrough=False)
+
         self.tag_code_block = buffer.create_tag(self.TAG_NAME_CODE_BLOCK,
                                                 weight=Pango.Weight.NORMAL,
                                                 style=Pango.Style.NORMAL,
@@ -101,11 +116,14 @@ class MarkupHandler:
             self.TAG_NAME_BOLD: lambda args: self.tag_bold,
             self.TAG_NAME_BOLD_ITALIC: lambda args: self.tag_bold_italic,
             self.TAG_NAME_STRIKETHROUGH: lambda args: self.tag_strikethrough,
+            self.TAG_NAME_SUPERSCRIPT: lambda args: self.tag_superscript,
+            self.TAG_NAME_SUBSCRIPT: lambda args: self.tag_subscript,
             self.TAG_NAME_CENTER: lambda args: self.tag_center,
             self.TAG_NAME_WRAP_NONE: lambda args: self.tag_wrap_none,
             self.TAG_NAME_PLAIN_TEXT: lambda args: self.tag_plain_text,
             self.TAG_NAME_GRAY_TEXT: lambda args: self.tag_gray_text,
             self.TAG_NAME_CODE_TEXT: lambda args: self.tag_code_text,
+            self.TAG_NAME_MATH_TEXT: lambda args: self.tag_math_text,
             self.TAG_NAME_CODE_BLOCK: lambda args: self.tag_code_block,
             self.TAG_NAME_MARGIN_INDENT: lambda args: self.get_margin_indent_tag(*args)
         }
@@ -182,6 +200,8 @@ class MarkupHandler:
             # - "**bold**" (bold)
             # - "***bolditalic***" (bold/italic)
             # - "~~strikethrough~~" (strikethrough)
+            # - "~subscript~" (subscript)
+            # - "^superscript^" - currently inactive as it can interfere with formulae and footnotes
             # - "`code`" (colorize)
             # - "$math$" (colorize)
             # - "---" table (wrap/pixels)
@@ -191,8 +211,10 @@ class MarkupHandler:
                 (BOLD, self.TAG_NAME_BOLD),
                 (BOLD_ITALIC, self.TAG_NAME_BOLD_ITALIC),
                 (STRIKETHROUGH, self.TAG_NAME_STRIKETHROUGH),
+                # (SUPERSCRIPT, self.TAG_NAME_SUPERSCRIPT),
+                (SUBSCRIPT, self.TAG_NAME_SUBSCRIPT),
                 (CODE, self.TAG_NAME_CODE_TEXT),
-                (MATH, self.TAG_NAME_CODE_TEXT),
+                (MATH, self.TAG_NAME_MATH_TEXT),
                 (TABLE, self.TAG_NAME_WRAP_NONE)
             )
             for regexp, tag_name in regexps:
@@ -310,10 +332,13 @@ class MarkupHandler:
             buffer.remove_tag(self.tag_bold, start, end)
             buffer.remove_tag(self.tag_bold_italic, start, end)
             buffer.remove_tag(self.tag_strikethrough, start, end)
+            buffer.remove_tag(self.tag_subscript, start, end)
+            # buffer.remove_tag(self.tag_superscript, start, end)
             buffer.remove_tag(self.tag_center, start, end)
             buffer.remove_tag(self.tag_plain_text, start, end)
             buffer.remove_tag(self.tag_gray_text, start, end)
             buffer.remove_tag(self.tag_code_text, start, end)
+            buffer.remove_tag(self.tag_math_text, start, end)
             buffer.remove_tag(self.tag_code_block, start, end)
             buffer.remove_tag(self.tag_wrap_none, start, end)
             for tag in self.tags_margins_indents.values():
